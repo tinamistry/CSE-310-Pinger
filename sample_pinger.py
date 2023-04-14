@@ -52,9 +52,6 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # TODO
         # Fetch the ICMP header from the IP packet
         #this includes check sum, sequence number, time to live
-#shift out
-#and  with number of bits u want
-#shift right number of bits
         icmp_header = recPacket << 160
 
         n = 0b1111111111111111

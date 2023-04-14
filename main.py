@@ -37,7 +37,7 @@ def checksum(string):
     return answer
 
 
-def receiveOnePing(mySocket, ID, timeout, destAddr):
+def receiveOnePing(mySocket, ID, timeout, destAddr):  # recieve an echo reply
     global rtt_min, rtt_max, rtt_sum, rtt_cnt
     timeLeft = timeout
     while 1:
@@ -49,55 +49,15 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         timeReceived = time.time()  # time stamp the packet was recieved
         recPacket, addr = mySocket.recvfrom(1024)  # rec packet is the packet received
-        recPacket = int.from_bytes(recPacket, 'big')
 
         # TODO
         # Fetch the ICMP header from the IP packet
-        # this includes check sum, sequence number, time to live
-        # shift out
-        # and  with number of bits u want
-        # shift right number of bits
-
-        #we want to shift 160 bits to get the icmp header-> bits 160->224
-        mask = int('1'*64, 2)
-        icmp_header = (recPacket >> 160) & mask
-        print('header:')
-        print(icmp_header)
-
-        #extracting the type
-        #starts at bit 160, ends at 167 and is 8 bits
-        mask = (1 << 8)-1
-        type = (recPacket >> 160) & mask
-        print('type:')
-        print(type)
-
-        #extracting the code
-        #starts at 168 ends at 175 is 8 bits
-        mask = (1 << 8) - 1
-        code = (recPacket >> 168) & mask
-        print('code:')
-        print(code)
-
-        mask = (1 << 16) - 1
-        checkSum = (recPacket >> 176) & mask
-        print('checkSum:')
-        print(checkSum)
-
-        id = (recPacket >> 192) & mask
-        print('id from shift:')
-        print(id)
-        print('id from params')
-        print(id)
-
-        sequence = (recPacket >> 208) & mask
-        print('sequence:')
-        print(sequence)
-
-
-
-
-
-
+        b = recPacket[20:28]
+        print('unpacked:')
+        print(struct.unpack("bbHHh", b))
+        d = recPacket[28:36]
+        print('data')
+        print(struct.unpack('d', d))
 
 
 
@@ -120,7 +80,7 @@ def sendOnePing(mySocket, destAddr, ID):
     # Make a dummy header with a 0 checksum.
     # struct -- Interpret strings as packed binary data
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)  # fills the header
-    data = struct.pack("d", time.time())  # 8 bytes #the data has the current time it is sent
+    data = struct.pack("d",time.time())  # 8 bytes #the data has the current time it is sent
     # Calculate the checksum on the data and the dummy header.
     myChecksum = checksum(header + data)
 
@@ -133,11 +93,19 @@ def sendOnePing(mySocket, destAddr, ID):
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
+    #print('packet')
+    #print(packet)
+    #print(header)
+    print("unpacked header in send ping")
+    print(struct.unpack('bbHHh', header))
+    print('data in send')
+    print(struct.unpack('d', data))
+
+
 
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
     # Both LISTS and TUPLES consist of a number of objects
     # which can be referenced by their position number within the object
-
 
 def doOnePing(destAddr, timeout):
     icmp = socket.getprotobyname("icmp")
@@ -169,16 +137,14 @@ def ping(host, timeout=1):
             print(doOnePing(dest, timeout))  # prints the delay
             time.sleep(1)  # waits 1 second to receive a response
     except KeyboardInterrupt:
-     # TODO
-     # calculate statistic here
-     # the payload has the time stamp
-     # calculate min max and avg RTTTs after the program is closed
-     print('Here')
-     # TODO END
+        # TODO
+        # calculate statistic here
+        # the payload has the time stamp
+        # calculate min max and avg RTTTs after the program is closed
+        print('Here')
+        # TODO END
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     ping(sys.argv[1])
-
-
-
