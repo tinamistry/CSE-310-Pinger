@@ -52,22 +52,20 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):  # recieve an echo reply
 
         # TODO
         # Fetch the ICMP header from the IP packet
-        b = recPacket[20:28]
-        print('unpacked:')
-        print(struct.unpack("bbHHh", b))
         d = recPacket[28:36]
-        print('data')
-        print(struct.unpack('d', d))
-
-
-
-
-
-
-
+        timeSent = struct.unpack('d', d)
+        timeSent = timeSent[0]
+        timeDifference = (timeReceived-timeSent) * 1000
+        if timeDifference < rtt_min:
+            rtt_min = timeDifference
+        if timeDifference > rtt_max:
+            rtt_max = timeDifference
+        sizeOfPacket = len(recPacket)
+        print(sizeOfPacket, "bytes from ", addr[0], "; time = ", round(timeDifference,1), "ms")
+        rtt_sum += timeDifference
+        rtt_cnt+=1
 
         # TODO END
-
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
             return "Request timed out."
@@ -93,15 +91,6 @@ def sendOnePing(mySocket, destAddr, ID):
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
-    #print('packet')
-    #print(packet)
-    #print(header)
-    print("unpacked header in send ping")
-    print(struct.unpack('bbHHh', header))
-    print('data in send')
-    print(struct.unpack('d', data))
-
-
 
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
     # Both LISTS and TUPLES consist of a number of objects
@@ -141,7 +130,11 @@ def ping(host, timeout=1):
         # calculate statistic here
         # the payload has the time stamp
         # calculate min max and avg RTTTs after the program is closed
-        print('Here')
+        print("-------", dest, "ping statistics--------")
+        avg = round(rtt_sum/rtt_cnt, 3)
+        print("round trip min/avg/max: ", round(rtt_min,3), "/",avg,"/", round(rtt_max,3))
+
+
         # TODO END
 
 
