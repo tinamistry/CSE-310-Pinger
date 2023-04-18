@@ -13,6 +13,7 @@ rtt_max = float('-inf')
 rtt_sum = 0
 rtt_cnt = 0
 
+
 def checksum(string):
     csum = 0
     countTo = (len(string) / 2) * 2
@@ -36,7 +37,7 @@ def checksum(string):
     return answer
 
 
-def receiveOnePing(mySocket, ID, timeout, destAddr):
+def receiveOnePing(mySocket, ID, timeout, destAddr):  # recieve an echo reply
     global rtt_min, rtt_max, rtt_sum, rtt_cnt
     timeLeft = timeout
     while 1:
@@ -46,44 +47,40 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         if whatReady[0] == []:  # Timeout
             return "Request timed out."
 
-        timeReceived = time.time() #time stamp the packet was recieved
-        recPacket, addr = mySocket.recvfrom(1024) #rec packet is the packet received
+        timeReceived = time.time()  # time stamp the packet was recieved
+        recPacket, addr = mySocket.recvfrom(1024)  # rec packet is the packet received
 
         # TODO
         # Fetch the ICMP header from the IP packet
-        #this includes check sum, sequence number, time to live
-        icmp_header = recPacket << 160
-
-        n = 0b1111111111111111
-        checksum = icmp_header << 16
-        checksum = checksum & n
-        checksum = checksum >> 16
-
-        id = icmp_header << 32
-        id = id & n
-        id = id >> 32
-
-        sequence = icmp_header << 48
-        id = id & n
-        id = id >> 48
-
-        data = icmp_header << 224
+        d = recPacket[28:36]
+        timeSent = struct.unpack('d', d)
+        timeSent = timeSent[0]
+        timeDifference = (timeReceived-timeSent) * 1000
+        if timeDifference < rtt_min:
+            rtt_min = timeDifference
+        if timeDifference > rtt_max:
+            rtt_max = timeDifference
+        sizeOfPacket = len(recPacket)
+        print(sizeOfPacket, "bytes from ", addr[0], "; time = ", round(timeDifference,1), "ms")
+        rtt_sum += timeDifference
+        rtt_cnt += 1
 
         # TODO END
-
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
-            return "Request timed out."
+            print("Request timed out.")
+            return
+        return
 
 
 def sendOnePing(mySocket, destAddr, ID):
-    # Header is type (8), code (8), checksum (16), id (16), sequence (16)
+    # Header is type (8), code (8), checksum (16), id (16), sequence (16) = 64 bits
 
     myChecksum = 0
     # Make a dummy header with a 0 checksum.
     # struct -- Interpret strings as packed binary data
-    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1) #fills the header
-    data = struct.pack("d", time.time())    # 8 bytes #the data has the current time it is sent
+    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)  # fills the header
+    data = struct.pack("d",time.time())  # 8 bytes #the data has the current time it is sent
     # Calculate the checksum on the data and the dummy header.
     myChecksum = checksum(header + data)
 
@@ -101,15 +98,12 @@ def sendOnePing(mySocket, destAddr, ID):
     # Both LISTS and TUPLES consist of a number of objects
     # which can be referenced by their position number within the object
 
-
 def doOnePing(destAddr, timeout):
     icmp = socket.getprotobyname("icmp")
     # SOCK_RAW is a powerful socket type. For more details see: http://sock-raw.org/papers/sock_raw
-
     # TODO
     # Create Socket here
-    mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW,socket.IPPROTO_RAW)
-    
+    mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
     # TODO END
 
     myID = os.getpid() & 0xFFFF  # Return the current process i
@@ -131,17 +125,20 @@ def ping(host, timeout=1):
     try:
         while True:
             cnt += 1
-            print(doOnePing(dest, timeout)) #prints the delay
-            time.sleep(1) #waits 1 second to receive a response
+            doOnePing(dest, timeout)  # prints the delay
+            time.sleep(1)  # waits 1 second to receive a response
     except KeyboardInterrupt:
-         # TODO
-         # calculate statistic here
-         #the payload has the time stamp
-         #calculate min max and avg RTTTs after the program is closed
-         print('timeout')
-
-        
+        # TODO
+        # calculate statistic here
+        # the payload has the time stamp
+        # calculate min max and avg RTTTs after the program is closed
+        print("-------", dest, "ping statistics--------")
+        avg = round(rtt_sum/rtt_cnt, 3)
+        print("round trip min/avg/max: ", round(rtt_min,3), "/",avg,"/", round(rtt_max,3), 'ms')
         # TODO END
 
+
+# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     ping(sys.argv[1])
+
