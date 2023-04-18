@@ -5,6 +5,7 @@ To run my project I used the command: sudo python sample_pinger.py <destination>
 First I tested my client by sending packets to local host: 127.0.0.1
 
 ![ 127.0.0.1 .png](..%2F..%2FDesktop%2F%20127.0.0.1%20.png)
+![127.0.0.1.png]( /venv/127.0.0.1.png "Optional title")
 
 Next I tested by sending packet to stonybrook.edu
 ![stonybrook.edu.png](..%2F..%2FDesktop%2Fstonybrook.edu.png)
